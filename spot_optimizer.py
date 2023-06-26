@@ -41,3 +41,35 @@ for region in desired_regions:
 # Output of the best configurations for each region
 for region, instance_type in best_instance_by_region.items():
     print(f"Best instance type in region {region}: {instance_type}")
+
+# Create a Terraform file using the best configurations
+tf_config = {
+    'variable': {
+        'aws_region': {
+            'default': desired_regions[0]  # Use the first default region
+        },
+        'instance_type': {
+            'default': best_instance_by_region[desired_regions[0]]  # Use the first best default configuration
+        }
+    },
+    'provider': {
+        'aws': {
+            'region': '${var.aws_region}'
+        }
+    },
+    'resource': {
+        'aws_instance': {
+            'example': {
+                'instance_type': '${var.instance_type}',
+                # Add other required settings
+            }
+        }
+    }
+}
+
+with open('spot_instance.tf.json', 'w') as tf_file:
+    tf_file.write(json.dumps(tf_config, indent=4))
+
+# Start Terraform
+subprocess.run(['terraform', 'init'])
+subprocess.run(['terraform', 'apply'])
