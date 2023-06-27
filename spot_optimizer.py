@@ -7,14 +7,15 @@ desired_vcpu = 2
 desired_ram = 4
 desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']  # List of desired regions
 
-# Initialize the AWS Client
-ec2_client = boto3.client('ec2')
-
 # Dictionary to store the best configuration for each region
 best_instance_by_region = {}
 
 # Iterate over each region
 for region in desired_regions:
+    # Initialize the AWS Client
+    session = boto3.Session(profile_name='spot_optimizer', region_name=region)
+    ec2_client = session.client('ec2')
+
     # Get information about Spot prices
     response = ec2_client.describe_spot_price_history(
         InstanceTypes=['*'],  # Get pricing for all available instance types
