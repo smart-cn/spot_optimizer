@@ -46,13 +46,9 @@ for region in desired_regions:
     best_instance_type = None
     for price in response['SpotPriceHistory']:
         instance_type = price['InstanceType']
-        instance_info = ec2_client.describe_instance_types(InstanceTypes=[instance_type])
-        vcpu = int(instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus'])
-        ram = int(instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']) * 1024
-        if vcpu >= desired_vcpu and ram >= desired_ram:
-            if best_price is None or float(price['SpotPrice']) < best_price:
-                best_price = float(price['SpotPrice'])
-                best_instance_type = instance_type
+        if best_price is None or float(price['SpotPrice']) < best_price:
+            best_price = float(price['SpotPrice'])
+            best_instance_type = instance_type
 
     if best_instance_type is not None:
         best_instance_by_region[region] = best_instance_type
