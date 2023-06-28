@@ -14,9 +14,28 @@ for region in desired_regions:
     session = boto3.Session(profile_name='spot_optimizer', region_name=region)
     ec2_client = session.client('ec2')
 
+    # Get a list of instances that match the given requirements
+    matched_instances = [
+        # Get a list of dictionaries with instances that match the given requirements and convert it to list
+        d['InstanceType'] for d in ec2_client.get_instance_types_from_instance_requirements(
+            ArchitectureTypes=['i386', 'x86_64', 'arm64'],
+            VirtualizationTypes=['hvm', 'paravirtual'],
+            InstanceRequirements={
+                'VCpuCount': {
+                    'Min': desired_vcpu,
+                    'Max': desired_vcpu * 3
+                },
+                'MemoryMiB': {
+                    'Min': desired_ram * 1000,
+                    'Max': desired_ram * 1000 * 3
+                }
+            }
+        )['InstanceTypes']
+    ]
+
     # Get information about Spot prices
     response = ec2_client.describe_spot_price_history(
-        InstanceTypes=[],  # Get pricing only for some instance types
+        InstanceTypes=matched_instances,  # Get pricing only for some instance types
         ProductDescriptions=['Linux/UNIX'],  # Specify operating system
         MaxResults=10,  # Increase the maximum number of results if necessary
         AvailabilityZone=region + 'a'  # Select an Availability Zone in a Region
