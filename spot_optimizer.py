@@ -4,7 +4,7 @@ import json
 
 # Set the required parameters
 desired_vcpu = 2
-desired_ram = 4
+desired_ram = 16
 desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']  # List of desired regions
 
 # Dictionary to store the best configuration for each region
@@ -18,9 +18,9 @@ for region in desired_regions:
 
     # Get information about Spot prices
     response = ec2_client.describe_spot_price_history(
-        InstanceTypes=['*'],  # Get pricing for all available instance types
+        InstanceTypes=[],  # Get pricing only for some instance types
         ProductDescriptions=['Linux/UNIX'],  # Specify operating system
-        MaxResults=1000,  # Increase the maximum number of results if necessary
+        MaxResults=10,  # Increase the maximum number of results if necessary
         AvailabilityZone=region + 'a'  # Select an Availability Zone in a Region
     )
 
@@ -29,8 +29,9 @@ for region in desired_regions:
     best_instance_type = None
     for price in response['SpotPriceHistory']:
         instance_type = price['InstanceType']
-        vcpu = int(price['CpuCoreCount'])
-        ram = float(price['Memory'])
+        instance_info = ec2_client.describe_instance_types(InstanceTypes=[instance_type])
+        vcpu = int(instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus'])
+        ram = int(instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']) * 1024
         if vcpu >= desired_vcpu and ram >= desired_ram:
             if best_price is None or float(price['SpotPrice']) < best_price:
                 best_price = float(price['SpotPrice'])
