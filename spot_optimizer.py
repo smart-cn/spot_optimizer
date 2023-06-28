@@ -1,6 +1,4 @@
 import boto3
-import subprocess
-import json
 
 # Set the required parameters
 desired_vcpu = 2
