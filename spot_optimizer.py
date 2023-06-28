@@ -1,4 +1,6 @@
 import boto3
+from datetime import datetime
+from datetime import timedelta
 
 # Set the required parameters
 desired_vcpu = 2
@@ -35,6 +37,8 @@ for region in desired_regions:
 
     # Get information about Spot prices
     response = ec2_client.describe_spot_price_history(
+        StartTime=datetime.today() - timedelta(days=1),
+        EndTime=datetime.today(),
         InstanceTypes=matched_instances,  # Get pricing only for some instance types
         ProductDescriptions=['Linux/UNIX'],  # Specify operating system
         MaxResults=10,  # Increase the maximum number of results if necessary
