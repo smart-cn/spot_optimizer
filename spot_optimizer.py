@@ -12,39 +12,62 @@ best_instance_by_region = {}
 
 # Iterate over each region
 for region in desired_regions:
+    pagination_token = ''
+
     # Initialize the AWS Client
     session = boto3.Session(profile_name='spot_optimizer', region_name=region)
     ec2_client = session.client('ec2')
 
     # Get a list of instances that match the given requirements
-    matched_instances = [
-        # Get a list of dictionaries with instances that match the given requirements and convert it to list
-        d['InstanceType'] for d in ec2_client.get_instance_types_from_instance_requirements(
-            ArchitectureTypes=['i386', 'x86_64', 'arm64'],
-            VirtualizationTypes=['hvm', 'paravirtual'],
-            InstanceRequirements={
-                'VCpuCount': {
-                    'Min': desired_vcpu,
-                    'Max': desired_vcpu * 3
-                },
-                'MemoryMiB': {
-                    'Min': desired_ram * 1000,
-                    'Max': desired_ram * 1000 * 3
+    matched_instances = []
+    while 1:
+        if pagination_token == '':
+            matched_instances_page = ec2_client.get_instance_types_from_instance_requirements(
+                ArchitectureTypes=['i386', 'x86_64', 'arm64'],
+                VirtualizationTypes=['hvm', 'paravirtual'],
+                InstanceRequirements={
+                    'VCpuCount': {
+                        'Min': desired_vcpu,
+                        'Max': desired_vcpu * 3
+                    },
+                    'MemoryMiB': {
+                        'Min': desired_ram * 1000,
+                        'Max': desired_ram * 1000 * 3
+                    }
                 }
-            }
-        )['InstanceTypes']
-    ]
+            )
+        else:
+            matched_instances_page = ec2_client.get_instance_types_from_instance_requirements(
+                ArchitectureTypes=['i386', 'x86_64', 'arm64'],
+                VirtualizationTypes=['hvm', 'paravirtual'],
+                InstanceRequirements={
+                    'VCpuCount': {
+                        'Min': desired_vcpu,
+                        'Max': desired_vcpu * 3
+                    },
+                    'MemoryMiB': {
+                        'Min': desired_ram * 1000,
+                        'Max': desired_ram * 1000 * 3
+                    }
+                },
+                NextToken=pagination_token # Token to use pagination if it will be required
+            )
+        matched_instances.extend(d['InstanceType'] for d in matched_instances_page['InstanceTypes'])
+        if 'NextToken' in matched_instances_page:
+            pagination_token = matched_instances_page['NextToken']
+        else:
+            pagination_token = ''
+            break
 
     # Get information about Spot prices
     instances_prices = []
-    pagination_token = ''
     while 1:
         spot_prices = ec2_client.describe_spot_price_history(
             StartTime=datetime.today() - timedelta(days=1),
             EndTime=datetime.today(),
             InstanceTypes=matched_instances,  # Get pricing only for some instance types
             ProductDescriptions=['Linux/UNIX'],  # Specify operating system
-            NextToken=pagination_token # Token to use pagination if it will be required
+            NextToken=pagination_token  # Token to use pagination if it will be required
         )
         instances_prices.extend(spot_prices['SpotPriceHistory'])
         pagination_token = spot_prices['NextToken']
