@@ -76,15 +76,15 @@ for region in desired_regions:
 
     # Find the best configuration in your current region
     best_price = None
-    best_instance_type = None
     for price in instances_prices:
-        instance_type = price['InstanceType']
-        if best_price is None or float(price['SpotPrice']) < best_price:
-            best_price = float(price['SpotPrice'])
-            best_instance_type = instance_type
+        if best_price is None or float(price['SpotPrice']) < float(best_price['SpotPrice']):
+            best_price = price
 
-    if best_instance_type is not None:
-        best_instance_by_region[region] = best_instance_type
+    if best_price is not None:
+        best_price['InstanceDescription'] = ec2_client.describe_instance_types(
+            InstanceTypes=[best_price['InstanceType']]
+        )
+        best_instance_by_region[region] = best_price
 
 # Output of the best configurations for each region
 for region, instance_type in best_instance_by_region.items():
