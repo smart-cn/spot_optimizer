@@ -1,6 +1,5 @@
 import boto3
 from datetime import datetime
-from datetime import timedelta
 
 # Set the required parameters
 desired_vcpu = 2
@@ -63,8 +62,7 @@ for region in desired_regions:
     instances_prices = []
     while 1:
         spot_prices = ec2_client.describe_spot_price_history(
-            StartTime=datetime.today() - timedelta(days=1),
-            EndTime=datetime.today(),
+            StartTime=datetime.today(),
             InstanceTypes=matched_instances,  # Get pricing only for some instance types
             ProductDescriptions=['Linux/UNIX'],  # Specify operating system
             NextToken=pagination_token  # Token to use pagination if it will be required
