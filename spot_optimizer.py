@@ -57,6 +57,28 @@ def get_matched_instances(session,
     return matched_instances
 
 
+def get_instances_descriptions(session,
+                               instance_types):
+    # List to store instances description
+    instances_description = []
+    # Create API client for the provided session
+    ec2_client = session.client('ec2')
+    # Form the body of the API request according to the specified parameters
+    filter = {
+        'InstanceTypes': instance_types
+    }
+    # Send API request and retrieve the list of instances description for instances that match the given instance types
+    #  with pagination, if required
+    while 1:
+        instances_description_page = ec2_client.describe_instance_types(**filter)
+        instances_description.extend(instances_description_page['InstanceTypes'])
+        if 'NextToken' in instances_description_page and instances_description_page['NextToken'] != '':
+            filter['NextToken'] = instances_description_page['NextToken']
+        else:
+            break  # No next page, so the full list is retrieved
+    return instances_description
+
+
 # Iterate over each region
 for region in desired_regions:
 
