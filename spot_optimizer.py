@@ -79,6 +79,42 @@ def get_instances_descriptions(session,
     return instances_description
 
 
+def get_spot_prices(session,
+                    history_start_time=None,
+                    history_end_time=None,
+                    instances_types=None,
+                    instances_description=None):
+    # Form the body of the API request according to the specified parameters
+    if history_start_time is None:
+        history_start_time = datetime.today()
+    filter = {
+        'StartTime': history_start_time
+    }
+    if history_end_time is not None:
+        filter['EndTime'] = history_end_time
+    if instances_types is not None:
+        filter['InstanceTypes'] = instances_types
+    if instances_description is not None:
+        filter['ProductDescriptions'] = instances_description
+    else:
+        filter['ProductDescriptions'] = ['Linux/UNIX']
+    # Create spot prices empty list
+    spot_prices = []
+    # Create API client for the provided session
+    ec2_client = session.client('ec2')
+    # Send API request and retrieve the list of the instances that match the given requirements
+    #  with pagination, if required
+    while 1:
+        spot_prices_page = ec2_client.describe_spot_price_history(**filter)
+        spot_prices.extend(spot_prices_page['SpotPriceHistory'])
+        if 'NextToken' in spot_prices_page and spot_prices_page['NextToken'] != '':
+            filter['NextToken'] = spot_prices_page['NextToken']
+        else:
+            break  # No next page, so the full list is retrieved
+
+    return spot_prices
+
+
 # Iterate over each region
 for region in desired_regions:
 
