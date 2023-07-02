@@ -2,13 +2,12 @@ from datetime import datetime
 
 import boto3
 
+# Configure desired parameters of the instance
 # Set the required parameters
 desired_vcpu = 2
 desired_ram = 16
-desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']  # List of desired regions
-
-# Dictionary to store the best configuration for each region
-best_instance_by_region = {}
+# List of desired regions
+desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
 
 
 # Get a list of instances that match the given requirements
@@ -54,6 +53,7 @@ def get_matched_instances(session,
             instance_description['NextToken'] = matched_instances_page['NextToken']
         else:
             break  # No next page, so the full list is retrieved
+
     return matched_instances
 
 
@@ -76,6 +76,7 @@ def get_instances_descriptions(session,
             filter['NextToken'] = instances_description_page['NextToken']
         else:
             break  # No next page, so the full list is retrieved
+
     return instances_description
 
 
@@ -115,6 +116,8 @@ def get_spot_prices(session,
     return spot_prices
 
 
+# Dictionary to store the best configuration for each region
+best_instance_by_region = {}
 # Iterate over each region
 for region in desired_regions:
 
