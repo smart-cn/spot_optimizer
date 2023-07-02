@@ -121,28 +121,16 @@ for region in desired_regions:
     # Initialize the AWS session
     session = boto3.Session(profile_name='spot_optimizer', region_name=region)
 
-    pagination_token = ''
-    ec2_client = session.client('ec2')
-
-    # Get information about Spot prices
-    instances_prices = []
-    while 1:
-        spot_prices = ec2_client.describe_spot_price_history(
-            StartTime=datetime.today(),
-            InstanceTypes=get_matched_instances(session, vcpu_min=desired_vcpu, vcpu_max=desired_vcpu * 3,
-                                                ram_min=desired_ram, ram_max=desired_ram * 3),
-            # Get pricing only for some instance types
-            ProductDescriptions=['Linux/UNIX'],  # Specify operating system
-            NextToken=pagination_token  # Token to use pagination if it will be required
-        )
-        instances_prices.extend(spot_prices['SpotPriceHistory'])
-        pagination_token = spot_prices['NextToken']
-        if pagination_token == '':
-            break
-
+    # Get spot prices for instances, which match the requirements
+    instances_spot_prices = get_spot_prices(session=session,
+                                            instances_types=get_matched_instances(session=session,
+                                                                                  vcpu_min=desired_vcpu,
+                                                                                  vcpu_max=desired_vcpu * 3,
+                                                                                  ram_min=desired_ram,
+                                                                                  ram_max=desired_ram * 3))
     # Find the best configuration in your current region
     best_price = None
-    for price in instances_prices:
+    for price in instances_spot_prices:
         if best_price is None or float(price['SpotPrice']) < float(best_price['SpotPrice']):
             best_price = price
 
