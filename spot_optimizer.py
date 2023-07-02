@@ -111,9 +111,8 @@ for region in desired_regions:
             best_price = price
 
     if best_price is not None:
-        best_price['InstanceDescription'] = ec2_client.describe_instance_types(
-            InstanceTypes=[best_price['InstanceType']]
-        )
+        best_price['InstanceDescription'] = get_instances_descriptions(session=session,
+                                                                       instance_types=[best_price['InstanceType']])
         best_instance_by_region[region] = best_price
 
 # Output of the best configurations for each region
