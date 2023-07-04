@@ -146,6 +146,65 @@ def get_aws_products(session,
     return price_list
 
 
+def get_region_name(region_code):
+    endpoint_file = resource_filename('botocore', 'data/endpoints.json')
+    with open(endpoint_file, 'r') as f:
+        endpoint_data = json.load(f)
+    e_data = endpoint_data
+    region_name = e_data['partitions'][0]['regions'][region_code]['description']
+    region_name = region_name.replace('Europe', 'EU')
+
+    return region_name
+
+
+def get_ec2_on_demand_prices(session,
+                             region_code,
+                             instance_types=None,
+                             operating_system='Linux',
+                             preinstalled_software='NA',
+                             tenancy='Shared',
+                             is_byol=False):
+    filters = [{'Type': 'TERM_MATCH', 'Field': 'location', 'Value': get_region_name(region_code)},
+               {'Type': 'TERM_MATCH', 'Field': 'termType', 'Value': 'OnDemand'},
+               {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': tenancy},
+               {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': operating_system},
+               {'Type': 'TERM_MATCH', 'Field': 'preInstalledSw', 'Value': preinstalled_software}]
+    if is_byol:
+        filters.append({'Type': 'TERM_MATCH', 'Field': 'licenseModel', 'Value': 'Bring your own license'})
+    else:
+        filters.append({'Type': 'TERM_MATCH', 'Field': 'licenseModel', 'Value': 'No License required'})
+    if tenancy == 'Host':
+        filters.append({'Type': 'TERM_MATCH', 'Field': 'capacitystatus', 'Value': 'AllocatedHost'})
+    else:
+        filters.append({'Type': 'TERM_MATCH', 'Field': 'capacitystatus', 'Value': 'Used'})
+    price_list = []
+    if instance_types is None:
+        price_list = get_aws_products(session=session, service_code='AmazonEC2', filters=filters)
+    else:
+        if type(instance_types) is str:
+            filters_single_instance = filters
+            filters_single_instance.append({'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_types})
+            price_list.extend(get_aws_products(session=session,
+                                               service_code='AmazonEC2',
+                                               filters=filters_single_instance))
+        else:
+            for instance_type in instance_types:
+                filters_single_instance = list(filters).copy()
+                filters_single_instance.append({'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type})
+                price_list.extend(get_aws_products(session=session,
+                                                   service_code='AmazonEC2',
+                                                   filters=filters_single_instance))
+    instance_prices = []
+    for price in price_list:
+        instance_price = {}
+        instance_price['instance_type'] = price['product']['attributes']['instanceType']
+        instance_price['price'] = \
+            list(list(price['terms']['OnDemand'].values())[0]['priceDimensions'].values())[0]['pricePerUnit']['USD']
+        instance_prices.append(instance_price)
+
+    return instance_prices
+
+
 # Dictionary to store the best configuration for each region
 best_instance_by_region = {}
 # Iterate over each region
