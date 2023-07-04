@@ -116,6 +116,36 @@ def get_spot_prices(session,
     return spot_prices
 
 
+def get_aws_products(session,
+                     service_code,
+                     filters):
+    # Create empty products list
+    products_list = []
+    # Crate pricing client for the session using provided endpoint
+    pricing_client = session.client('pricing', region_name='us-east-1')
+    # Send API request and retrieve the list of products with prices by Service code
+    pagination_token = ''
+    while 1:
+        if pagination_token == '':
+            products_list_page = pricing_client.get_products(ServiceCode=service_code,
+                                                             Filters=filters)
+        else:
+            products_list_page = pricing_client.get_products(ServiceCode=service_code,
+                                                             Filters=filters,
+                                                             NextToken=pagination_token)
+        products_list.extend(products_list_page['PriceList'])
+        if 'NextToken' in products_list_page and products_list_page['NextToken'] != '':
+            pagination_token = products_list_page['NextToken']
+        else:
+            break  # No next page, so the full list is retrieved
+    # Convert retrieved list from json format to python objects
+    price_list = []
+    for product in products_list:
+        price_list.append(json.loads(product))
+
+    return price_list
+
+
 # Dictionary to store the best configuration for each region
 best_instance_by_region = {}
 # Iterate over each region
