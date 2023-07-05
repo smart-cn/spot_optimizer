@@ -112,8 +112,16 @@ def get_spot_prices(session,
             filter['NextToken'] = spot_prices_page['NextToken']
         else:
             break  # No next page, so the full list is retrieved
+    spot_instance_prices = []
+    for spot_price in spot_prices:
+        spot_instance_price = {}
+        spot_instance_price['InstanceType'] = spot_price['InstanceType']
+        spot_instance_price['Price'] = spot_price['SpotPrice']
+        spot_instance_price['AZ'] = spot_price['AvailabilityZone']
+        spot_instance_price['Raw'] = spot_price
+        spot_instance_prices.append(spot_instance_price)
 
-    return spot_prices
+    return spot_instance_prices
 
 
 def get_aws_products(session,
@@ -224,7 +232,7 @@ for region in desired_regions:
     # Find the best configuration in your current region
     best_price = None
     for price in instances_spot_prices:
-        if best_price is None or float(price['SpotPrice']) < float(best_price['SpotPrice']):
+        if best_price is None or float(price['Price']) < float(best_price['Price']):
             best_price = price
 
     if best_price is not None:
