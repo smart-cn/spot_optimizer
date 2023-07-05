@@ -200,6 +200,7 @@ def get_ec2_on_demand_prices(session,
         instance_price['instance_type'] = price['product']['attributes']['instanceType']
         instance_price['price'] = \
             list(list(price['terms']['OnDemand'].values())[0]['priceDimensions'].values())[0]['pricePerUnit']['USD']
+        instance_price['raw'] = price
         instance_prices.append(instance_price)
 
     return instance_prices
