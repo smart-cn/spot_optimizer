@@ -2,13 +2,6 @@ from datetime import datetime
 
 import boto3
 
-# Configure desired parameters of the instance
-# Set the required parameters
-desired_vcpu = 2
-desired_ram = 16
-# List of desired regions
-desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
-
 
 # Get a list of instances that match the given requirements
 def get_matched_instances(session,
@@ -214,32 +207,40 @@ def get_ec2_on_demand_prices(session,
     return instance_prices
 
 
-# Dictionary to store the best configuration for each region
-best_instance_by_region = {}
-# Iterate over each region
-for region in desired_regions:
+if __name__ == "__main__":
+    # Configure desired parameters of the instance
+    # Set the required parameters
+    desired_vcpu = 2
+    desired_ram = 16
+    # List of desired regions
+    desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
 
-    # Initialize the AWS session
-    session = boto3.Session(profile_name='spot_optimizer', region_name=region)
+    # Dictionary to store the best configuration for each region
+    best_instance_by_region = {}
+    # Iterate over each region
+    for region in desired_regions:
 
-    # Get spot prices for instances, which match the requirements
-    instances_spot_prices = get_spot_prices(session=session,
-                                            instances_types=get_matched_instances(session=session,
-                                                                                  vcpu_min=desired_vcpu,
-                                                                                  vcpu_max=desired_vcpu * 3,
-                                                                                  ram_min=desired_ram,
-                                                                                  ram_max=desired_ram * 3))
-    # Find the best configuration in your current region
-    best_price = None
-    for price in instances_spot_prices:
-        if best_price is None or float(price['Price']) < float(best_price['Price']):
-            best_price = price
+        # Initialize the AWS session
+        session = boto3.Session(profile_name='spot_optimizer', region_name=region)
 
-    if best_price is not None:
-        best_price['InstanceDescription'] = get_instances_descriptions(session=session,
-                                                                       instance_types=[best_price['InstanceType']])
-        best_instance_by_region[region] = best_price
+        # Get spot prices for instances, which match the requirements
+        instances_spot_prices = get_spot_prices(session=session,
+                                                instances_types=get_matched_instances(session=session,
+                                                                                      vcpu_min=desired_vcpu,
+                                                                                      vcpu_max=desired_vcpu * 3,
+                                                                                      ram_min=desired_ram,
+                                                                                      ram_max=desired_ram * 3))
+        # Find the best configuration in your current region
+        best_price = None
+        for price in instances_spot_prices:
+            if best_price is None or float(price['Price']) < float(best_price['Price']):
+                best_price = price
 
-# Output of the best configurations for each region
-for region, instance_type in best_instance_by_region.items():
-    print(f"Best instance type in region {region}: {instance_type}")
+        if best_price is not None:
+            best_price['InstanceDescription'] = get_instances_descriptions(session=session,
+                                                                           instance_types=[best_price['InstanceType']])
+            best_instance_by_region[region] = best_price
+
+    # Output of the best configurations for each region
+    for region, instance_type in best_instance_by_region.items():
+        print(f"Best instance type in region {region}: {instance_type}")
