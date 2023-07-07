@@ -1,6 +1,8 @@
+import json
 from datetime import datetime
 
 import boto3
+from pkg_resources import resource_filename
 
 
 # Get a list of instances that match the given requirements
@@ -214,33 +216,44 @@ if __name__ == "__main__":
     desired_ram = 16
     # List of desired regions
     desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
-
-    # Dictionary to store the best configuration for each region
-    best_instance_by_region = {}
+    # Global price list of the instances, which matches the requirements
+    instances_prices = []
     # Iterate over each region
     for region in desired_regions:
-
         # Initialize the AWS session
         session = boto3.Session(profile_name='spot_optimizer', region_name=region)
+        # Get list of available instances in the region, which
+        instances_list = get_matched_instances(session=session,
+                                               vcpu_min=desired_vcpu,
+                                               vcpu_max=desired_vcpu * 3,
+                                               ram_min=desired_ram,
+                                               ram_max=desired_ram * 3)
 
-        # Get spot prices for instances, which match the requirements
-        instances_spot_prices = get_spot_prices(session=session,
-                                                instances_types=get_matched_instances(session=session,
-                                                                                      vcpu_min=desired_vcpu,
-                                                                                      vcpu_max=desired_vcpu * 3,
-                                                                                      ram_min=desired_ram,
-                                                                                      ram_max=desired_ram * 3))
-        # Find the best configuration in your current region
-        best_price = None
-        for price in instances_spot_prices:
-            if best_price is None or float(price['Price']) < float(best_price['Price']):
-                best_price = price
-
-        if best_price is not None:
-            best_price['InstanceDescription'] = get_instances_descriptions(session=session,
-                                                                           instance_types=[best_price['InstanceType']])
-            best_instance_by_region[region] = best_price
-
-    # Output of the best configurations for each region
-    for region, instance_type in best_instance_by_region.items():
-        print(f"Best instance type in region {region}: {instance_type}")
+        # Get prices for on-demand matched instances
+        instances_prices_on_demand = []
+        for dictionary in get_ec2_on_demand_prices(session=session,
+                                                   region_code=region,
+                                                   instance_types=instances_list):
+            tmp_dict = dictionary.copy()
+            tmp_dict["Type"] = "On-demand"
+            tmp_dict["Region"] = region
+            instances_prices_on_demand.append(tmp_dict)
+        # Append on-demand prices to the global price list
+        instances_prices.extend(instances_prices_on_demand)
+        # Get spot prices for matched instances
+        instances_prices_spot = []
+        for dictionary in get_spot_prices(session=session,
+                                          instances_types=instances_list):
+            tmp_dict = dictionary.copy()
+            tmp_dict["Type"] = "Spot"
+            tmp_dict["Region"] = region
+            instances_prices_on_demand.append(tmp_dict)
+        # Append spot prices to the global price list
+        instances_prices.extend(instances_prices_on_demand)
+    # Sort instances by price
+    sorted_prices_list = sorted(instances_prices, key=lambda x: x['Price'], reverse=False)
+    # Print 5 cheapest instances that matched the provided requirements
+    print("Top 5 cheapest instances that matched the provided requirements:")
+    for instance_price in sorted_prices_list[:5]:
+        print(f"Price: {instance_price['Price']}, Instance: {instance_price['InstanceType']}, "
+              f"Type: {instance_price['Type']}, Region: {instance_price['Region']}, AZ: {instance_price['AZ']}")
