@@ -242,6 +242,7 @@ if __name__ == "__main__":
             tmp_dict["Region"] = region
             tmp_dict["Description"] = [d for d in instances_description if
                                        d['InstanceType'] == tmp_dict['InstanceType']][0]
+            tmp_dict["Discount"] = 0
             instances_prices_on_demand.append(tmp_dict)
         # Append on-demand prices to the global price list
         instances_prices.extend(instances_prices_on_demand)
@@ -254,6 +255,14 @@ if __name__ == "__main__":
             tmp_dict["Region"] = region
             tmp_dict["Description"] = [d for d in instances_description if
                                        d['InstanceType'] == tmp_dict['InstanceType']][0]
+            if 'on-demand' in tmp_dict['Description']['SupportedUsageClasses']:
+                tmp_dict["Discount"] = round(((float(
+                    [d for d in instances_prices_on_demand if d['InstanceType'] == tmp_dict['InstanceType']][0][
+                        'Price']) - float(tmp_dict['Price'])) / float(
+                    [d for d in instances_prices_on_demand if d['InstanceType'] == tmp_dict['InstanceType']][0][
+                        'Price'])) * 100)
+            else:
+                tmp_dict["Discount"] = 0
             instances_prices_on_demand.append(tmp_dict)
         # Append spot prices to the global price list
         instances_prices.extend(instances_prices_on_demand)
@@ -262,8 +271,9 @@ if __name__ == "__main__":
     # Print 5 cheapest instances that matched the provided requirements
     print("Top 5 cheapest instances that matched the provided requirements:")
     for instance_price in sorted_prices_list[:5]:
-        print(f"Price: {instance_price['Price']}, Instance: {instance_price['InstanceType']}, "
-              f"Type: {instance_price['Type']}, Region: {instance_price['Region']}, AZ: {instance_price['AZ']}, "
+        print(f"Price: {instance_price['Price']} (-{instance_price['Discount']}%), "
+              f"Instance: {instance_price['InstanceType']}, Type: {instance_price['Type']}, "
+              f"Region: {instance_price['Region']}, AZ: {instance_price['AZ']}, "
               f"Ram(GiB): {round(instance_price['Description']['MemoryInfo']['SizeInMiB'] / 1024, 3)}, "
               f"CPU: {instance_price['Description']['VCpuInfo']['DefaultVCpus']} x "
               f"{instance_price['Description']['ProcessorInfo']}")
