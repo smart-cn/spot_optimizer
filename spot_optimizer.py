@@ -222,12 +222,15 @@ if __name__ == "__main__":
     for region in desired_regions:
         # Initialize the AWS session
         session = boto3.Session(profile_name='spot_optimizer', region_name=region)
-        # Get list of available instances in the region, which
+        # Get list of available instances in the region, that matched the provided requirements
         instances_list = get_matched_instances(session=session,
                                                vcpu_min=desired_vcpu,
                                                vcpu_max=desired_vcpu * 3,
                                                ram_min=desired_ram,
                                                ram_max=desired_ram * 3)
+
+        # Get descriptions for the matched instances
+        instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
 
         # Get prices for on-demand matched instances
         instances_prices_on_demand = []
@@ -237,6 +240,8 @@ if __name__ == "__main__":
             tmp_dict = dictionary.copy()
             tmp_dict["Type"] = "On-demand"
             tmp_dict["Region"] = region
+            tmp_dict["Description"] = [d for d in instances_description if
+                                       d['InstanceType'] == tmp_dict['InstanceType']][0]
             instances_prices_on_demand.append(tmp_dict)
         # Append on-demand prices to the global price list
         instances_prices.extend(instances_prices_on_demand)
@@ -247,6 +252,8 @@ if __name__ == "__main__":
             tmp_dict = dictionary.copy()
             tmp_dict["Type"] = "Spot"
             tmp_dict["Region"] = region
+            tmp_dict["Description"] = [d for d in instances_description if
+                                       d['InstanceType'] == tmp_dict['InstanceType']][0]
             instances_prices_on_demand.append(tmp_dict)
         # Append spot prices to the global price list
         instances_prices.extend(instances_prices_on_demand)
@@ -256,4 +263,7 @@ if __name__ == "__main__":
     print("Top 5 cheapest instances that matched the provided requirements:")
     for instance_price in sorted_prices_list[:5]:
         print(f"Price: {instance_price['Price']}, Instance: {instance_price['InstanceType']}, "
-              f"Type: {instance_price['Type']}, Region: {instance_price['Region']}, AZ: {instance_price['AZ']}")
+              f"Type: {instance_price['Type']}, Region: {instance_price['Region']}, AZ: {instance_price['AZ']}, "
+              f"Ram(GiB): {round(instance_price['Description']['MemoryInfo']['SizeInMiB'] / 1024, 3)}, "
+              f"CPU: {instance_price['Description']['VCpuInfo']['DefaultVCpus']} x "
+              f"{instance_price['Description']['ProcessorInfo']}")
