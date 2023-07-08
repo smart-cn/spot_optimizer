@@ -25,13 +25,13 @@ def get_matched_instances(session,
             'Min': vcpu_min
         },
         'MemoryMiB': {
-            'Min': ram_min * 1000
+            'Min': ram_min * 1024
         }
     }
     if vcpu_max is not None:
         instance_requirements['VCpuCount']['Max'] = vcpu_max
     if ram_max is not None:
-        instance_requirements['MemoryMiB']['Max'] = ram_max * 1000
+        instance_requirements['MemoryMiB']['Max'] = ram_max * 1024
     instance_description = {
         'ArchitectureTypes': arch_types,
         'VirtualizationTypes': virt_types,
