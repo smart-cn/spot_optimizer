@@ -13,17 +13,16 @@ if __name__ == "__main__":
     instances_prices = []
     # Iterate over each region
     for region in desired_regions:
+        instances_prices_regional = []
         # Initialize the AWS session
         session = boto3.Session(profile_name='spot_optimizer', region_name=region)
+
         # Get list of available instances in the region, that matched the provided requirements
         instances_list = get_matched_instances(session=session,
                                                vcpu_min=desired_vcpu,
                                                vcpu_max=desired_vcpu * 3,
                                                ram_min=desired_ram,
                                                ram_max=desired_ram * 3)
-
-        # Get descriptions for the matched instances
-        instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
 
         # Get prices for on-demand matched instances
         instances_prices_on_demand = []
@@ -32,35 +31,46 @@ if __name__ == "__main__":
                                                    instance_types=instances_list):
             tmp_dict = dictionary.copy()
             tmp_dict["Type"] = "On-demand"
-            tmp_dict["Region"] = region
-            tmp_dict["Description"] = [d for d in instances_description if
-                                       d['InstanceType'] == tmp_dict['InstanceType']][0]
-            tmp_dict["Discount"] = 0
             instances_prices_on_demand.append(tmp_dict)
         # Append on-demand prices to the global price list
-        instances_prices.extend(instances_prices_on_demand)
+        instances_prices_regional.extend(instances_prices_on_demand)
+
         # Get spot prices for matched instances
         instances_prices_spot = []
         for dictionary in get_spot_prices(session=session,
                                           instances_types=instances_list):
             tmp_dict = dictionary.copy()
             tmp_dict["Type"] = "Spot"
-            tmp_dict["Region"] = region
-            tmp_dict["Description"] = [d for d in instances_description if
-                                       d['InstanceType'] == tmp_dict['InstanceType']][0]
-            if 'on-demand' in tmp_dict['Description']['SupportedUsageClasses']:
-                tmp_dict["Discount"] = round(((float(
-                    [d for d in instances_prices_on_demand if d['InstanceType'] == tmp_dict['InstanceType']][0][
-                        'Price']) - float(tmp_dict['Price'])) / float(
-                    [d for d in instances_prices_on_demand if d['InstanceType'] == tmp_dict['InstanceType']][0][
-                        'Price'])) * 100)
-            else:
-                tmp_dict["Discount"] = 0
             instances_prices_on_demand.append(tmp_dict)
         # Append spot prices to the global price list
-        instances_prices.extend(instances_prices_on_demand)
+        instances_prices_regional.extend(instances_prices_on_demand)
+
+        # Get descriptions for the matched instances
+        instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
+
+        # Generate additional fields for the regional price list
+        for instances_price in instances_prices_regional:
+            instances_price["Region"] = region
+            instances_price["Description"] = [d for d in instances_description if
+                                              d['InstanceType'] == instances_price['InstanceType']][0]
+            if instances_price["Type"] == "Spot":
+                if 'on-demand' in instances_price['Description']['SupportedUsageClasses']:
+                    instances_price["Discount"] = round(((float(
+                        [d for d in instances_prices_on_demand if d['InstanceType'] == instances_price['InstanceType']][
+                            0]['Price']) - float(instances_price['Price'])) / float(
+                        [d for d in instances_prices_on_demand if d['InstanceType'] == instances_price['InstanceType']][
+                            0]['Price'])) * 100)
+                else:
+                    instances_price["Discount"] = 0
+            else:
+                instances_price["Discount"] = 0
+
+        # Add regional price list to the global list
+        instances_prices.extend(instances_prices_regional)
+
     # Sort instances by price
     sorted_prices_list = sorted(instances_prices, key=lambda x: x['Price'], reverse=False)
+
     # Print 5 cheapest instances that matched the provided requirements
     print("Top 5 cheapest instances that matched the provided requirements:")
     for instance_price in sorted_prices_list[:5]:
