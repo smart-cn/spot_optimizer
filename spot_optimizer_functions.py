@@ -208,3 +208,24 @@ def get_ec2_on_demand_prices(session,
         instance_prices.append(instance_price)
 
     return instance_prices
+
+
+# Generate additional fields for the regional price list
+def pricelist_add_descriptions(instances_pricelist, instances_descriptions, region):
+    for instance_price in instances_pricelist:
+        instance_price["Region"] = region
+        instance_price["Description"] = [d for d in instances_descriptions if
+                                         d['InstanceType'] == instance_price['InstanceType']][0]
+        if instance_price["Type"] == "Spot":
+            if 'on-demand' in instance_price['Description']['SupportedUsageClasses']:
+                instance_price["Discount"] = round(((float(
+                    [d for d in instances_pricelist if d['Type'] == 'On-demand' and
+                     d['InstanceType'] == instance_price['InstanceType']][0]['Price']) -
+                                                     float(instance_price['Price'])) / float(
+                    [d for d in instances_pricelist if
+                     d['Type'] == 'On-demand' and d['InstanceType'] == instance_price['InstanceType']][
+                        0]['Price'])) * 100)
+            else:
+                instance_price["Discount"] = 0
+        else:
+            instance_price["Discount"] = 0

@@ -6,7 +6,7 @@ if __name__ == "__main__":
     # Configure desired parameters of the instance
     # Set the required parameters
     desired_vcpu = 2
-    desired_ram = 8
+    desired_ram = 16
     # List of desired regions
     desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
     # Global price list of the instances, which matches the requirements
@@ -38,24 +38,9 @@ if __name__ == "__main__":
         # Get descriptions for the matched instances
         instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
 
-        # Generate additional fields for the regional price list
-        for instances_price in instances_prices_regional:
-            instances_price["Region"] = region
-            instances_price["Description"] = [d for d in instances_description if
-                                              d['InstanceType'] == instances_price['InstanceType']][0]
-            if instances_price["Type"] == "Spot":
-                if 'on-demand' in instances_price['Description']['SupportedUsageClasses']:
-                    instances_price["Discount"] = round(((float(
-                        [d for d in instances_prices_regional if d['Type'] == 'On-demand' and
-                         d['InstanceType'] == instances_price['InstanceType']][0]['Price']) -
-                                                          float(instances_price['Price'])) / float(
-                        [d for d in instances_prices_regional if
-                         d['Type'] == 'On-demand' and d['InstanceType'] == instances_price['InstanceType']][
-                            0]['Price'])) * 100)
-                else:
-                    instances_price["Discount"] = 0
-            else:
-                instances_price["Discount"] = 0
+        pricelist_add_descriptions(instances_pricelist=instances_prices_regional,
+                                   instances_descriptions=instances_description,
+                                   region=region)
 
         # Add regional price list to the global list
         instances_prices.extend(instances_prices_regional)
