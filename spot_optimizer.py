@@ -6,14 +6,13 @@ if __name__ == "__main__":
     # Configure desired parameters of the instance
     # Set the required parameters
     desired_vcpu = 2
-    desired_ram = 16
+    desired_ram = 8
     # List of desired regions
     desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
     # Global price list of the instances, which matches the requirements
     instances_prices = []
     # Iterate over each region
     for region in desired_regions:
-        instances_prices_regional = []
         # Initialize the AWS session
         session = boto3.Session(profile_name='spot_optimizer', region_name=region)
 
@@ -24,26 +23,17 @@ if __name__ == "__main__":
                                                ram_min=desired_ram,
                                                ram_max=desired_ram * 3)
 
-        # Get prices for on-demand matched instances
-        instances_prices_on_demand = []
-        for dictionary in get_ec2_on_demand_prices(session=session,
-                                                   region_code=region,
-                                                   instance_types=instances_list):
-            tmp_dict = dictionary.copy()
-            tmp_dict["Type"] = "On-demand"
-            instances_prices_on_demand.append(tmp_dict)
-        # Append on-demand prices to the global price list
-        instances_prices_regional.extend(instances_prices_on_demand)
+        # Initialize regional price list
+        instances_prices_regional = []
 
-        # Get spot prices for matched instances
-        instances_prices_spot = []
-        for dictionary in get_spot_prices(session=session,
-                                          instances_types=instances_list):
-            tmp_dict = dictionary.copy()
-            tmp_dict["Type"] = "Spot"
-            instances_prices_on_demand.append(tmp_dict)
-        # Append spot prices to the global price list
-        instances_prices_regional.extend(instances_prices_on_demand)
+        # Get prices for on-demand matched instances and append them to the global price list
+        instances_prices_regional.extend(get_ec2_on_demand_prices(session=session,
+                                                                  region_code=region,
+                                                                  instance_types=instances_list))
+
+        # Get spot prices for matched instances and append them to the global price list
+        instances_prices_regional.extend(get_spot_prices(session=session,
+                                                         instances_types=instances_list))
 
         # Get descriptions for the matched instances
         instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
@@ -56,9 +46,11 @@ if __name__ == "__main__":
             if instances_price["Type"] == "Spot":
                 if 'on-demand' in instances_price['Description']['SupportedUsageClasses']:
                     instances_price["Discount"] = round(((float(
-                        [d for d in instances_prices_on_demand if d['InstanceType'] == instances_price['InstanceType']][
-                            0]['Price']) - float(instances_price['Price'])) / float(
-                        [d for d in instances_prices_on_demand if d['InstanceType'] == instances_price['InstanceType']][
+                        [d for d in instances_prices_regional if d['Type'] == 'On-demand' and
+                         d['InstanceType'] == instances_price['InstanceType']][0]['Price']) -
+                                                          float(instances_price['Price'])) / float(
+                        [d for d in instances_prices_regional if
+                         d['Type'] == 'On-demand' and d['InstanceType'] == instances_price['InstanceType']][
                             0]['Price'])) * 100)
                 else:
                     instances_price["Discount"] = 0

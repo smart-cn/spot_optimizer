@@ -110,6 +110,7 @@ def get_spot_prices(session,
     for spot_price in spot_prices:
         spot_instance_price = {}
         spot_instance_price['InstanceType'] = spot_price['InstanceType']
+        spot_instance_price['Type'] = 'Spot'
         spot_instance_price['Price'] = spot_price['SpotPrice']
         spot_instance_price['AZ'] = spot_price['AvailabilityZone']
         spot_instance_price['Raw'] = spot_price
@@ -200,6 +201,7 @@ def get_ec2_on_demand_prices(session,
     for price in price_list:
         instance_price = {}
         instance_price['InstanceType'] = price['product']['attributes']['instanceType']
+        instance_price['Type'] = 'On-demand'
         instance_price['Price'] = \
             list(list(price['terms']['OnDemand'].values())[0]['priceDimensions'].values())[0]['pricePerUnit']['USD']
         instance_price['RAW'] = price
