@@ -1,6 +1,20 @@
+import threading
+
 import boto3
 
 from spot_optimizer_functions import *
+
+
+def thread_method(function, function_args, lock, results_list):
+    function_result = function(**function_args)
+    with lock:
+        results_list.extend(function_result)
+
+
+def thread_method_no_lock(function, function_args, results_list):
+    function_result = function(**function_args)
+    results_list.extend(function_result)
+
 
 if __name__ == "__main__":
     # Configure desired parameters of the instance
@@ -13,6 +27,9 @@ if __name__ == "__main__":
     instances_prices = []
     # Iterate over each region
     for region in desired_regions:
+        # Initialize regional lock
+        lock_regional = threading.Lock()
+
         # Initialize the AWS session
         session = boto3.Session(profile_name='spot_optimizer', region_name=region)
 
@@ -25,19 +42,39 @@ if __name__ == "__main__":
 
         # Initialize regional price list
         instances_prices_regional = []
+        # Create a thread and get prices for the matched on-demand  instances
+        thread_on_demand = threading.Thread(target=thread_method,
+                                            args=(get_ec2_on_demand_prices, {'session': session,
+                                                                             'region_code': region,
+                                                                             'instance_types': instances_list},
+                                                  lock_regional,
+                                                  instances_prices_regional))
+        thread_on_demand.start()
 
-        # Get prices for on-demand matched instances and append them to the global price list
-        instances_prices_regional.extend(get_ec2_on_demand_prices(session=session,
-                                                                  region_code=region,
-                                                                  instance_types=instances_list))
+        # Create a thread and get prices for the matched spot instances
+        thread_spot = threading.Thread(target=thread_method,
+                                       args=(get_spot_prices, {'session': session,
+                                                               'instances_types': instances_list},
+                                             lock_regional,
+                                             instances_prices_regional))
+        thread_spot.start()
 
-        # Get spot prices for matched instances and append them to the global price list
-        instances_prices_regional.extend(get_spot_prices(session=session,
-                                                         instances_types=instances_list))
+        # Initialise descriptions list
+        instances_description = []
 
-        # Get descriptions for the matched instances
-        instances_description = get_instances_descriptions(session=session, instance_types=instances_list)
+        # Create a thread and get descriptions for the matched instances
+        thread_descriptions = threading.Thread(target=thread_method_no_lock,
+                                               args=(get_instances_descriptions, {'session': session,
+                                                                                  'instance_types': instances_list},
+                                                     instances_description))
+        thread_descriptions.start()
 
+        # Wait for the created threads finish
+        thread_on_demand.join()
+        thread_spot.join()
+        thread_descriptions.join()
+
+        # Add instances descriptions to the instances price-list
         pricelist_add_descriptions(instances_pricelist=instances_prices_regional,
                                    instances_descriptions=instances_description,
                                    region=region)
