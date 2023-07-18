@@ -193,12 +193,11 @@ def get_ec2_on_demand_prices(session,
                                                service_code='AmazonEC2',
                                                filters=filters_single_instance))
         else:
+            price_list_full = get_aws_products(session=session, service_code='AmazonEC2', filters=filters)
             for instance_type in instance_types:
-                filters_single_instance = list(filters).copy()
-                filters_single_instance.append({'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type})
-                price_list.extend(get_aws_products(session=session,
-                                                   service_code='AmazonEC2',
-                                                   filters=filters_single_instance))
+                instance_price = [d for d in price_list_full if
+                                  d['product']['attributes']['instanceType'] == instance_type]
+                price_list.extend(instance_price)
     instance_prices = []
     for price in price_list:
         instance_price = {}
