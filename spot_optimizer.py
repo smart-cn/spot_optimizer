@@ -4,8 +4,8 @@ if __name__ == "__main__":
     # Set the required parameters
     desired_vcpu = 2
     desired_ram = 16
-    # List of desired regions
-    desired_regions = ['us-west-2', 'eu-west-1', 'ap-southeast-1']
+    # Set the list of the desired regions (use the empty list to use all enabled regions)
+    desired_regions = []
     # Global price list of the instances, which matches the requirements
     instances_prices = get_pricelist_global(profile_name='spot_optimizer',
                                             regions=desired_regions,

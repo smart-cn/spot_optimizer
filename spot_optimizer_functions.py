@@ -314,6 +314,9 @@ def get_pricelist_global(**kwargs):
     # Get the regions list from the arguments and remove it from there
     regions_list = arguments['regions']
     del arguments['regions']
+    # Use all available regions if not desired regions list is empty
+    if not regions_list:
+        regions_list = get_regions_list(session=boto3.Session(profile_name=arguments['profile_name']))
     # Initialize empty pricelist
     pricelist = []
     # Initialize thread lock
@@ -334,3 +337,11 @@ def get_pricelist_global(**kwargs):
         thread.join()
 
     return pricelist
+
+
+def get_regions_list(session):
+    account_client = session.client("account")
+    allowed_regions = account_client.list_regions(RegionOptStatusContains=['ENABLED', 'ENABLED_BY_DEFAULT'])
+    allowed_regions_list = [x["RegionName"] for x in allowed_regions["Regions"]]
+
+    return allowed_regions_list

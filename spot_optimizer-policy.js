@@ -9,7 +9,8 @@
                 "ec2:GetInstanceTypesFromInstanceRequirements",
                 "ec2:DescribeInstances",
                 "ec2:DescribeInstanceTypes",
-                "pricing:GetProducts"
+                "pricing:GetProducts",
+                "account:ListRegions"
             ],
             "Resource": "*"
         }
