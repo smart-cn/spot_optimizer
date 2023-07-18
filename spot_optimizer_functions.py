@@ -1,5 +1,6 @@
 import json
 import threading
+import time
 from datetime import datetime
 
 import boto3
@@ -303,3 +304,33 @@ def get_pricelist_regional(profile_name='default',
                                region=region_name)
 
     return instances_prices_regional
+
+
+def get_pricelist_global(**kwargs):
+    # Get function arguments
+    arguments = {}
+    for key, value in kwargs.items():
+        arguments[key] = value
+    # Get the regions list from the arguments and remove it from there
+    regions_list = arguments['regions']
+    del arguments['regions']
+    # Initialize empty pricelist
+    pricelist = []
+    # Initialize thread lock
+    lock = threading.Lock()
+    # Create and run a separate thread for each region
+    threads = []
+    for region in regions_list:
+        arguments['region_name'] = region
+        time.sleep(0.100)
+        thread = threading.Thread(target=thread_method, args=(get_pricelist_regional,
+                                                              arguments,
+                                                              lock,
+                                                              pricelist))
+        thread.start()
+        threads.append(thread)
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    return pricelist
