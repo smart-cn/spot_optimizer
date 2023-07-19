@@ -345,3 +345,22 @@ def get_regions_list(session):
     allowed_regions_list = [x["RegionName"] for x in allowed_regions["Regions"]]
 
     return allowed_regions_list
+
+
+def print_pricelist(pricelist, lines=None):
+    i = 1
+    for instance_price in pricelist:
+        message = f"Price: {instance_price['Price']}/{round(float(instance_price['Price']) * 24 * 30, 2)} "
+        if instance_price['Type'] == 'Spot':
+            message += f"(-{instance_price['Discount']}%), "
+        message += f"Instance: {instance_price['InstanceType']}, Region: {instance_price['Region']}, "
+        if instance_price['Type'] == 'Spot':
+            message += f"AZ: {instance_price['AZ']}, "
+        message += f"Ram(GiB): {round(instance_price['Description']['MemoryInfo']['SizeInMiB'] / 1024, 3)}, "
+        message += f"CPU: {instance_price['Description']['VCpuInfo']['DefaultVCpus']} "
+        if 'SustainedClockSpeedInGhz' in instance_price['Description']['ProcessorInfo']:
+            message += f"x {instance_price['Description']['ProcessorInfo']['SustainedClockSpeedInGhz']} GHz"
+        print(message)
+        i = i + 1
+        if (lines is not None) and (i > lines):
+            break

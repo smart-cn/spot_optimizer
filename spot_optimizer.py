@@ -15,11 +15,4 @@ if __name__ == "__main__":
     sorted_prices_list = sorted(instances_prices, key=lambda x: x['Price'], reverse=False)
     # Print 5 cheapest instances that matched the provided requirements
     print("Top 5 cheapest instances that matched the provided requirements:")
-    for instance_price in sorted_prices_list[:5]:
-        print(
-            f"Price: {instance_price['Price']}/{round(float(instance_price['Price']) * 24 * 30, 2)} "
-            f"(-{instance_price['Discount']}%), Instance: {instance_price['InstanceType']}, "
-            f"Type: {instance_price['Type']}, Region: {instance_price['Region']}, AZ: {instance_price['AZ']}, "
-            f"Ram(GiB): {round(instance_price['Description']['MemoryInfo']['SizeInMiB'] / 1024, 3)}, "
-            f"CPU: {instance_price['Description']['VCpuInfo']['DefaultVCpus']} x "
-            f"{instance_price['Description']['ProcessorInfo']}")
+    print_pricelist(pricelist=sorted_prices_list, lines=5)
