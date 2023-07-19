@@ -347,9 +347,16 @@ def get_regions_list(session):
     return allowed_regions_list
 
 
-def print_pricelist(pricelist, lines=None):
+def print_pricelist(pricelist,
+                    only_spot=False,
+                    only_on_demand=False,
+                    lines=None):
     i = 1
     for instance_price in pricelist:
+        if only_spot and instance_price['Type'] != 'Spot':
+            continue
+        if only_on_demand and instance_price['Type'] != 'On-demand':
+            continue
         message = f"Price: {instance_price['Price']}/{round(float(instance_price['Price']) * 24 * 30, 2)} "
         if instance_price['Type'] == 'Spot':
             message += f"(-{instance_price['Discount']}%), "

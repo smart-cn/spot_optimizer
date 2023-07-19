@@ -13,6 +13,9 @@ if __name__ == "__main__":
                                             ram_min=desired_ram)
     # Sort instances by price
     sorted_prices_list = sorted(instances_prices, key=lambda x: x['Price'], reverse=False)
+    # Print 3 cheapest instances that matched the provided requirements
+    print("Top 3 cheapest on-demand instances that matched the provided requirements:")
+    print_pricelist(pricelist=sorted_prices_list, only_on_demand=True, lines=3)
     # Print 5 cheapest instances that matched the provided requirements
-    print("Top 5 cheapest instances that matched the provided requirements:")
+    print("\nTop 5 cheapest instances that matched the provided requirements:")
     print_pricelist(pricelist=sorted_prices_list, lines=5)
