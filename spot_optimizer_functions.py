@@ -66,13 +66,14 @@ def get_instances_descriptions(session,
     }
     # Send API request and retrieve the list of instances description for instances that match the given instance types
     #  with pagination, if required
-    while 1:
-        instances_description_page = ec2_client.describe_instance_types(**filter)
-        instances_description.extend(instances_description_page['InstanceTypes'])
-        if 'NextToken' in instances_description_page and instances_description_page['NextToken'] != '':
-            filter['NextToken'] = instances_description_page['NextToken']
-        else:
-            break  # No next page, so the full list is retrieved
+    if filter['InstanceTypes']:
+        while 1:
+            instances_description_page = ec2_client.describe_instance_types(**filter)
+            instances_description.extend(instances_description_page['InstanceTypes'])
+            if 'NextToken' in instances_description_page and instances_description_page['NextToken'] != '':
+                filter['NextToken'] = instances_description_page['NextToken']
+            else:
+                break  # No next page, so the full list is retrieved
 
     return instances_description
 
@@ -102,13 +103,14 @@ def get_spot_prices(session,
     ec2_client = session.client('ec2')
     # Send API request and retrieve the list of the instances that match the given requirements
     #  with pagination, if required
-    while 1:
-        spot_prices_page = ec2_client.describe_spot_price_history(**filter)
-        spot_prices.extend(spot_prices_page['SpotPriceHistory'])
-        if 'NextToken' in spot_prices_page and spot_prices_page['NextToken'] != '':
-            filter['NextToken'] = spot_prices_page['NextToken']
-        else:
-            break  # No next page, so the full list is retrieved
+    if filter['InstanceTypes']:
+        while 1:
+            spot_prices_page = ec2_client.describe_spot_price_history(**filter)
+            spot_prices.extend(spot_prices_page['SpotPriceHistory'])
+            if 'NextToken' in spot_prices_page and spot_prices_page['NextToken'] != '':
+                filter['NextToken'] = spot_prices_page['NextToken']
+            else:
+                break  # No next page, so the full list is retrieved
     spot_instance_prices = []
     for spot_price in spot_prices:
         spot_instance_price = {}
@@ -193,7 +195,7 @@ def get_ec2_on_demand_prices(session,
             price_list.extend(get_aws_products(session=session,
                                                service_code='AmazonEC2',
                                                filters=filters_single_instance))
-        else:
+        elif (type(instance_types) is list) and (instance_types != []):
             price_list_full = get_aws_products(session=session, service_code='AmazonEC2', filters=filters)
             for instance_type in instance_types:
                 instance_price = [d for d in price_list_full if
