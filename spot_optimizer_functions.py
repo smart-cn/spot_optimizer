@@ -67,13 +67,20 @@ def get_instances_descriptions(session,
     # Send API request and retrieve the list of instances description for instances that match the given instance types
     #  with pagination, if required
     if filter['InstanceTypes']:
-        while 1:
-            instances_description_page = ec2_client.describe_instance_types(**filter)
-            instances_description.extend(instances_description_page['InstanceTypes'])
-            if 'NextToken' in instances_description_page and instances_description_page['NextToken'] != '':
-                filter['NextToken'] = instances_description_page['NextToken']
-            else:
-                break  # No next page, so the full list is retrieved
+        if len(filter['InstanceTypes']) < 100:
+            while 1:
+                instances_description_page = ec2_client.describe_instance_types(**filter)
+                instances_description.extend(instances_description_page['InstanceTypes'])
+                if 'NextToken' in instances_description_page and instances_description_page['NextToken'] != '':
+                    filter['NextToken'] = instances_description_page['NextToken']
+                else:
+                    break  # No next page, so the full list is retrieved
+        else:
+            middle = len(filter['InstanceTypes']) // 2
+            sublist1 = get_instances_descriptions(session=session, instance_types=filter['InstanceTypes'][:middle])
+            sublist2 = get_instances_descriptions(session=session, instance_types=filter['InstanceTypes'][middle:])
+            sublist1.extend(sublist2)
+            instances_description = sublist1
 
     return instances_description
 
