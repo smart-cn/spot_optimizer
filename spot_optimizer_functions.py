@@ -369,7 +369,9 @@ def print_pricelist(pricelist,
         message = f"Price: {instance_price['Price']}/{round(float(instance_price['Price']) * 24 * 30, 2)} "
         if instance_price['Type'] == 'Spot':
             message += f"(-{instance_price['Discount']}%), "
-        message += f"Instance: {instance_price['InstanceType']}, Region: {instance_price['Region']}, "
+        message += f"Instance: {instance_price['InstanceType']}"
+        message += f" ({instance_price['Description']['ProcessorInfo']['SupportedArchitectures'][0]}), "
+        message += f"Region: {instance_price['Region']}, "
         if instance_price['Type'] == 'Spot':
             message += f"AZ: {instance_price['AZ']}, "
         message += f"Ram(GiB): {round(instance_price['Description']['MemoryInfo']['SizeInMiB'] / 1024, 3)}, "
