@@ -10,7 +10,8 @@ if __name__ == "__main__":
     instances_prices = get_pricelist_global(profile_name='spot_optimizer',
                                             regions=desired_regions,
                                             vcpu_min=desired_vcpu,
-                                            ram_min=desired_ram)
+                                            ram_min=desired_ram,
+                                            arch_types=['i386', 'x86_64', 'arm64'])
     # Sort instances by price
     sorted_prices_list = sorted(instances_prices, key=lambda x: float(x['Price']), reverse=False)
     # Print 3 cheapest instances that matched the provided requirements
