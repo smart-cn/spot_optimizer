@@ -17,7 +17,7 @@ def get_matched_instances(**kwargs):
     matched_instances = []
     # Form the body of the API request according to the specified parameters
     if 'arch_types' not in arguments:
-        arguments['arch_types'] = ['i386', 'x86_64', 'arm64']
+        arguments['arch_types'] = ['i386', 'x86_64', 'arm64', 'x86_64_mac', 'arm64_mac']
     if 'virt_types' not in arguments:
         arguments['virt_types'] = ['hvm', 'paravirtual']
     instance_requirements = {
@@ -28,9 +28,9 @@ def get_matched_instances(**kwargs):
             'Min': arguments['ram_min'] * 1024
         }
     }
-    if arguments['vcpu_max'] not in arguments:
+    if 'vcpu_max' in arguments:
         instance_requirements['VCpuCount']['Max'] = arguments['vcpu_max']
-    if arguments['ram_max'] not in arguments:
+    if 'ram_max' in arguments:
         instance_requirements['MemoryMiB']['Max'] = arguments['ram_max'] * 1024
     instance_description = {
         'ArchitectureTypes': arguments['arch_types'],
