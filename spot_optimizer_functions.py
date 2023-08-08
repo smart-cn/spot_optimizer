@@ -8,39 +8,37 @@ from pkg_resources import resource_filename
 
 
 # Get a list of instances that match the given requirements
-def get_matched_instances(session,
-                          vcpu_min=0,
-                          ram_min=0,
-                          vcpu_max=None,
-                          ram_max=None,
-                          arch_types=None,
-                          virt_types=None):
+def get_matched_instances(**kwargs):
+    # Get function arguments
+    arguments = {}
+    for key, value in kwargs.items():
+        arguments[key] = value
     # List to store names of the instances that match the given requirements
     matched_instances = []
     # Form the body of the API request according to the specified parameters
-    if arch_types is None:
-        arch_types = ['i386', 'x86_64', 'arm64']
-    if virt_types is None:
-        virt_types = ['hvm', 'paravirtual']
+    if 'arch_types' not in arguments:
+        arguments['arch_types'] = ['i386', 'x86_64', 'arm64']
+    if 'virt_types' not in arguments:
+        arguments['virt_types'] = ['hvm', 'paravirtual']
     instance_requirements = {
         'VCpuCount': {
-            'Min': vcpu_min
+            'Min': arguments['vcpu_min']
         },
         'MemoryMiB': {
-            'Min': ram_min * 1024
+            'Min': arguments['ram_min'] * 1024
         }
     }
-    if vcpu_max is not None:
-        instance_requirements['VCpuCount']['Max'] = vcpu_max
-    if ram_max is not None:
-        instance_requirements['MemoryMiB']['Max'] = ram_max * 1024
+    if arguments['vcpu_max'] not in arguments:
+        instance_requirements['VCpuCount']['Max'] = arguments['vcpu_max']
+    if arguments['ram_max'] not in arguments:
+        instance_requirements['MemoryMiB']['Max'] = arguments['ram_max'] * 1024
     instance_description = {
-        'ArchitectureTypes': arch_types,
-        'VirtualizationTypes': virt_types,
+        'ArchitectureTypes': arguments['arch_types'],
+        'VirtualizationTypes': arguments['virt_types'],
         'InstanceRequirements': instance_requirements
     }
     # Create API client for the provided session
-    ec2_client = session.client('ec2')
+    ec2_client = arguments['session'].client('ec2')
     # Send API request and retrieve the list of the instances that match the given requirements
     #  with pagination, if required
     while 1:
@@ -253,44 +251,42 @@ def thread_method_no_lock(function, function_args, results_list):
     results_list.extend(function_result)
 
 
-def get_pricelist_regional(profile_name='default',
-                           region_name=None,
-                           vcpu_min=None,
-                           vcpu_max=None,
-                           ram_min=None,
-                           ram_max=None):
+def get_pricelist_regional(**kwargs):
+    # Get function arguments
+    arguments = {}
+    for key, value in kwargs.items():
+        arguments[key] = value
+    # Get profile name
+    if 'profile_name' not in arguments:
+        arguments['profile_name'] = 'default'
     # Calculate desired parameters if not set
-    if vcpu_min is None:
-        vcpu_min = 0
-    if vcpu_max is None:
-        vcpu_max = vcpu_min * 3
-    if ram_min is None:
-        ram_min = 0
-    if ram_max is None:
-        ram_max = ram_min * 3
+    if 'vcpu_min' not in arguments:
+        arguments['vcpu_min'] = 0
+    if 'vcpu_max' not in arguments:
+        arguments['vcpu_max'] = arguments['vcpu_min'] * 3
+    if 'ram_min' not in arguments:
+        arguments['ram_min'] = 0
+    if 'ram_max' not in arguments:
+        arguments['ram_max'] = arguments['ram_min'] * 3
     # Initialize regional lock
     lock_regional = threading.Lock()
     # Initialize the AWS session
-    session = boto3.Session(profile_name=profile_name, region_name=region_name)
+    arguments['session'] = boto3.Session(profile_name=arguments['profile_name'], region_name=arguments['region_name'])
     # Get list of available instances in the region, that matched the provided requirements
-    instances_list = get_matched_instances(session=session,
-                                           vcpu_min=vcpu_min,
-                                           vcpu_max=vcpu_max,
-                                           ram_min=ram_min,
-                                           ram_max=ram_max)
+    instances_list = get_matched_instances(**arguments)
     # Initialize regional price list
     instances_prices_regional = []
     # Create a thread and get prices for the matched on-demand  instances
     thread_on_demand = threading.Thread(target=thread_method,
-                                        args=(get_ec2_on_demand_prices, {'session': session,
-                                                                         'region_code': region_name,
+                                        args=(get_ec2_on_demand_prices, {'session': arguments['session'],
+                                                                         'region_code': arguments['region_name'],
                                                                          'instance_types': instances_list},
                                               lock_regional,
                                               instances_prices_regional))
     thread_on_demand.start()
     # Create a thread and get prices for the matched spot instances
     thread_spot = threading.Thread(target=thread_method,
-                                   args=(get_spot_prices, {'session': session,
+                                   args=(get_spot_prices, {'session': arguments['session'],
                                                            'instances_types': instances_list},
                                          lock_regional,
                                          instances_prices_regional))
@@ -299,7 +295,7 @@ def get_pricelist_regional(profile_name='default',
     instances_description = []
     # Create a thread and get descriptions for the matched instances
     thread_descriptions = threading.Thread(target=thread_method_no_lock,
-                                           args=(get_instances_descriptions, {'session': session,
+                                           args=(get_instances_descriptions, {'session': arguments['session'],
                                                                               'instance_types': instances_list},
                                                  instances_description))
     thread_descriptions.start()
@@ -310,7 +306,7 @@ def get_pricelist_regional(profile_name='default',
     # Add instances descriptions to the instances price-list
     pricelist_add_descriptions(instances_pricelist=instances_prices_regional,
                                instances_descriptions=instances_description,
-                               region=region_name)
+                               region=arguments['region_name'])
 
     return instances_prices_regional
 
